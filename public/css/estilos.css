@@ -1,0 +1,235 @@
+.table td {
+    padding: 0.30rem;
+    vertical-align: middle;
+    border-top: 1px solid #e9e9e9;
+}
+
+.blockUI.blockOverlay {
+	background-color: #d2d2d2 !important;
+	opacity: 0.5 !important;
+    border: 0px;
+}
+/*typehead*/
+.typeahead + .dropdown-menu .active > a,
+.typeahead + .dropdown-menu .active > a:hover {
+    color: #ffffff;
+    background-color: #5f93fb;
+    background-image: -moz-linear-gradient(top, #5f93fb, #4781f6);
+    background-image: -webkit-gradient(linear, 0 0, 0 100%, from(#5f93fb), to(#4781f6));
+    background-image: -webkit-linear-gradient(top, #5f93fb, #4781f6);
+    background-image: -o-linear-gradient(top, #5f93fb, #4781f6);
+    background-image: linear-gradient(to bottom, #5f93fb, #4781f6);
+    filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#FF77FF', endColorstr='#FF44FF', GradientType=0);
+}
+  /*end typehead*/
+/* PARA FILE VALIDATE ORDEN DE SERVICIO*/
+  #alert.xd,#alert2.xd,#alert3.xd,#alert4.xd,#alert5.xd{
+    background:#ff9e9e; 
+    border:1px solid #ff0000;
+    color: #000;
+    padding: 2px 2px 2px 10px;
+    font-size: 10px;
+    border-radius:5px;
+  }
+    
+    #alert.xd2,#alert2.xd2,#alert3.xd2,#alert4.xd2,#alert5.xd2{
+      background: #9effb3;
+      border: 1px solid #00de26;
+      color: #000;
+      padding: 2px 2px 2px 10px;
+      border-radius: 5px;
+      font-size: 10px;
+    }
+
+    #alertArchivo1.xd2,#alertArchivo2.xd2,#alertArchivo3.xd2,#alertArchivo4.xd2,#alertArchivo5.xd2{
+      background: #9effb3;
+      border: 1px solid #00de26;
+      color: #000;
+      padding: 2px 2px 2px 10px;
+      border-radius: 5px;
+      font-size: 10px;
+    }
+    #alertArchivo1.xd,#alertArchivo2.xd,#alertArchivo3.xd,#alertArchivo4.xd,#alertArchivo5.xd{
+      background:#ff9e9e; 
+      border:1px solid #ff0000;
+      color: #000;
+      padding: 2px 2px 2px 10px;
+      font-size: 10px;
+      border-radius:5px;
+    }
+/*END FILE VALIDATE*/
+
+
+.custom-file-label::after {  
+  content: "Encontrar..."; 
+}
+
+table.dataTable thead tr {
+  background-color: #ff151d;
+}
+
+
+/*PAGINACION DE TABLAS*/
+
+.page-item.active .page-link {
+  color: #fff !important;
+  background-color: #000 !important;
+  border-color: #000 !important; 
+}
+
+.page-link {
+  color: #000 !important;
+  background-color: #fff !important;
+  border: 1px solid #dee2e6 !important; 
+}
+
+.page-link:hover {
+  color: #fff !important;
+  /* background-color: #000 !important; */
+  border-color: #565555 !important; 
+}
+
+.pagination .page-link:hover {
+  background-color: #e9f108 !important; 
+  /* color: #000000; */
+}  
+/*-----------------------------------------------*/
+
+/* danger COLOR BADGE (ESTADOS)*/
+
+.badge-danger {
+    color: #fff;
+    background-color: #ff151d;
+}
+.badge-success {
+  color: #fff;
+  background-color: #0b9565;
+}
+.badge-info {
+  color: #fff;
+  background-color: #0b86ea;
+}
+/*-------------------------*/
+
+/* BUTTONS COLOR (ESTADOS)*/
+.btn-primary {
+  color: #494949;
+  background-color: #dde658;
+  border-color: #e3f311 !important;
+}
+.btn-primary:hover { 
+  color: #000; 
+  background-color: #e3f311 !important;
+  border-color: #888888;
+}
+.btn-primary:active { 
+  color: #000; 
+  background-color: #e3f311 !important;
+  border-color: #888888;
+}
+
+.btn-danger {
+  color: #fff;
+  background-color: #ff3b42;
+  border-color: #ff151d;
+}
+.btn-danger:hover {  
+  background-color: #ff151d;
+  border-color: #ff151d;
+}
+/*-------------------------*/
+
+/*btn success*/
+.btn.btn-primary {
+  color: #494949;
+  background-color: #dde658;
+  border-color: #dde658;
+}
+.btn.btn-primary:hover {
+  color: #000;
+  background-color: #e3f311 !important;
+  border-color: #888888;
+}
+.btn.btn-primary:focus, .btn.btn-primary.focus {
+  box-shadow: 0 0 0 0.2rem rgba(245, 249, 9, 0.5);
+}
+.btn.btn-primary.disabled, .btn.btn-primary:disabled {
+  color: #000;
+  background-color: #dde658;
+  border-color: #dde658;
+}
+.btn.btn-primary:not(:disabled):not(.disabled):active,
+.btn.btn-primary:not(:disabled):not(.disabled).active {
+  color: #000;
+  background-color: #e3f311 !important;
+  border-color: #888888;
+}
+.show > .btn.btn-primary.dropdown-toggle {
+  color: #ffffff;
+  background-color: #e3f311;
+  border-color: #888888;
+}
+.show > .btn.btn-primary.dropdown-toggle:focus {
+  box-shadow: 0 0 0 0.2rem rgba(245, 249, 9, 0.5);
+}
+.btn.btn-primary:not(:disabled):not(.disabled):active:focus,
+.btn.btn-primary:not(:disabled):not(.disabled).active:focus {
+  box-shadow: 0 0 0 0.2rem rgba(245, 249, 9, 0.5);
+}
+
+/*menu color*/
+.nav-menu li a > [class*='fa-'], .nav-menu li a > .ni {  
+  color: #fc4349;  /*iconos*/
+}
+
+.nav-title {  
+  color: #fe5a5f;  /*titulos separadores menu*/
+}
+
+.nav-menu li a {  
+  color: #fa888c;  /*text menu*/
+}
+
+.nav-menu li > ul li a {
+  color: #fa888c;  /*menu cascate text*/
+}
+.nav-menu li > ul li > ul li a {
+  color: #fa888c;
+  padding: 0.8125rem 2rem 0.8125rem 4.75rem;
+}
+
+.nav-menu li.active:not(.open) > a:before {  
+  color: #ff151d; 
+}
+
+.nav-menu b.collapse-sign {  
+  color: #ff0000;
+}
+
+
+.nav-footer .nav-footer-buttons > li > a {  
+  color: #ffffff;  
+}
+
+.page-logo, .page-sidebar, .nav-footer, .bg-brand-gradient {/*footer*/
+  background-image: -webkit-gradient(linear, right top, left top, from(rgba(51, 148, 225, 0.18)), to(transparent));
+  background-image: linear-gradient(270deg, rgba(51, 148, 225, 0.18), transparent);
+  background-color: #333333;
+}
+
+
+.profile-image-md-user-my {
+  width: 4rem;
+  height: 4rem;
+}
+
+
+/*datatable select row  doble click y un click*/
+table.dataTable tbody > tr.selected, table.dataTable tbody > tr > .selected {
+  -webkit-box-shadow: inset 0 0 0px 1px #f9666b;
+  box-shadow: inset 0 0 0px 1px #f9666b;
+  background: rgba(251, 178, 178, 0.173);
+  font-weight: 600;
+  color: inherit;
+}
+
