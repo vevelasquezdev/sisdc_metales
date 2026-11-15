@@ -1,16 +1,22 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
-    
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+
     <title>Orden de Producción {{ $numero ?? '' }}</title>
     <style>
         /* ── Reset ──────────────────────────────────────────────────────── */
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
         @page {
-            size: 148mm 210mm landscape;   /* A5 landscape */
+            size: 148mm 210mm landscape;
+            /* A5 landscape */
             margin: 0;
         }
 
@@ -22,7 +28,7 @@
             background: #fff;
             width: 100%;
         }
-        
+
 
         /* ── Franjas rojas ──────────────────────────────────────────────── */
         .franja-top {
@@ -42,7 +48,8 @@
          */
         .franja-bottom {
             position: fixed;
-            bottom: 0; left: 0;
+            bottom: 0;
+            left: 0;
             width: 100%;
             height: 49px;
             color: #141414;
@@ -58,14 +65,17 @@
             padding: 5px 10px 4px 10px;
             border-bottom: 1px solid #ccc;
         }
+
         .header-table {
             width: 100%;
             border-collapse: collapse;
         }
+
         .header-table td {
             vertical-align: middle;
             padding: 0;
         }
+
         .titulo-op {
             font-size: 14pt;
             font-weight: bold;
@@ -89,34 +99,39 @@
             padding: 0 10px;
             margin-top: 4px;
         }
+
         .datos-top-table {
             width: 100%;
             border-collapse: collapse;
             border: 1px solid #ccc;
             table-layout: fixed;
         }
+
         .datos-top-table td {
             padding: 3px 6px;
             font-size: 7.5pt;
             vertical-align: middle;
         }
+
         .lbl {
             font-weight: bold;
             color: #141414;
             background-color: #f2f2f2;
             white-space: nowrap;
         }
+
         .val {
             border-bottom: 1px solid #ccc;
             color: #141414;
         }
+
         .cell-border-right {
             border-right: 1px solid #ccc;
         }
 
         /* Checkboxes de material */
         .chk-box {
-            font-family: "DejaVu Sans", sans-serif; 
+            font-family: "DejaVu Sans", sans-serif;
             display: inline-block;
             width: 10px;
             height: 10px;
@@ -124,11 +139,11 @@
             vertical-align: middle;
             margin-right: 2px;
             text-align: center;
-           
+
             /* position: absolute; */
             /* top: 180px; left: 150px;  */
         }
-       
+
         .chk-label {
             font-size: 6.5pt;
             vertical-align: middle;
@@ -140,12 +155,14 @@
             padding: 0 10px;
             margin-top: 4px;
         }
+
         .proceso-table {
             width: 100%;
             border-collapse: collapse;
             border: 1px solid #ccc;
             table-layout: fixed;
         }
+
         .proceso-table thead th {
             background-color: #1a1a1a;
             color: #fff;
@@ -155,9 +172,11 @@
             text-align: center;
             border-right: 1px solid #555;
         }
+
         .proceso-table thead th:last-child {
             border-right: none;
         }
+
         .proceso-table tbody tr td {
             font-size: 7pt;
             padding: 3px 5px;
@@ -166,19 +185,37 @@
             vertical-align: middle;
             color: #141414;
         }
+
         .proceso-table tbody tr td:last-child {
             border-right: none;
         }
+
         .proceso-table tbody tr:nth-child(even) td {
             background-color: #fafafa;
         }
 
         /* columnas de la tabla proceso */
-        .col-ruta     { width: 22%; }
-        .col-chk      { width: 5%;  text-align: center; }
-        .col-resp     { width: 20%; }
-        .col-fecha    { width: 18%; text-align: center; }
-        .col-obs-proc { width: 35%; }
+        .col-ruta {
+            width: 22%;
+        }
+
+        .col-chk {
+            width: 5%;
+            text-align: center;
+        }
+
+        .col-resp {
+            width: 20%;
+        }
+
+        .col-fecha {
+            width: 18%;
+            text-align: center;
+        }
+
+        .col-obs-proc {
+            width: 35%;
+        }
 
         .ruta-nombre {
             font-weight: bold;
@@ -191,11 +228,13 @@
             border-collapse: collapse;
             padding: 3px 10px;
         }
+
         .footer-dir-table td {
             font-size: 6.5pt;
             color: #141414;
             vertical-align: middle;
         }
+
         .web-label {
             font-size: 7.5pt;
             font-weight: bold;
@@ -206,11 +245,20 @@
         }
 
         /* ── Utilidades ─────────────────────────────────────────────────── */
-        .text-center { text-align: center; }
-        .text-right  { text-align: right; }
-        .text-bold   { font-weight: bold; }
+        .text-center {
+            text-align: center;
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        .text-bold {
+            font-weight: bold;
+        }
     </style>
 </head>
+
 <body>
 
     {{-- ── FRANJA SUPERIOR ────────────────────────────────────────────── --}}
@@ -271,7 +319,11 @@
                 <td class="val cell-border-right" colspan="3">{{ $cantidad ?? '' }}</td>
                 <td class="lbl cell-border-right">APROBADO<br>CLIENTE:</td>
                 <td class="val" style="text-align:center;">
-                    <span class="chk-box">@if(!empty($aprobado_cliente)) ✓ @endif</span>
+                    <span class="chk-box">
+                        @if (!empty($aprobado_cliente))
+                            ✓
+                        @endif
+                    </span>
                 </td>
             </tr>
             <tr>
@@ -330,7 +382,7 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach($proceso_data as $fila)
+                @foreach ($proceso_data as $fila)
                     <tr>
                         <td><span class="ruta-nombre">{{ $fila['nombre'] }}</span></td>
                         <td class="text-center">
@@ -338,7 +390,7 @@
                         </td>
                         <td>{{ $fila['responsable'] }}</td>
                         <td class="text-center" style="font-weight:bold;">
-                            {{ $fila['fecha'] ?? "__/__/2026" }}
+                            {{ $fila['fecha'] ?? '__/__/2026' }}
                         </td>
                         <td style="font-size:6.5pt;">{{ $fila['observaciones'] }}</td>
                     </tr>
@@ -353,7 +405,7 @@
           · tabla de direcciones  (fondo blanco)
           · tira roja con créditos del sistema
     --}}
-    <div class="franja-bottom">        
+    <div class="franja-bottom">
         <table class="footer-dir-table" style="padding:3px 22px;">
             <tr>
                 <td style="width:78%;">
@@ -384,10 +436,11 @@
 
         {{-- Tira roja inferior --}}
         <div style="background-color:#CC1E1E; color:#fff; font-size:7pt; text-align:center; line-height:15px;vertical-align:middle;">
-            Sistemas para Empresas &nbsp;|&nbsp; WebSoftAqp &nbsp; Cel: 927245347
+            Líderes en transformación y habilitación del acero en el sur del Perú
         </div>
 
     </div>{{-- /franja-bottom --}}
 
 </body>
+
 </html>

@@ -14,6 +14,7 @@ use App\Http\Controllers\admin\OperariosController;
 use App\Http\Controllers\admin\OrdenController;
 use App\Http\Controllers\admin\OrdenDetalleController;
 use App\Http\Controllers\admin\ServiciosController;
+use App\Http\Controllers\admin\InfoLocalesController;
 use App\Http\Controllers\admin\UserController;
 use App\Http\Controllers\caja\MovimientosController;
 use App\Http\Controllers\LoginOperadorController;
@@ -32,7 +33,7 @@ use App\Http\Controllers\insumos\StockController;
 use App\Http\Controllers\reportes\ReportIngresosSalidasInsumos;
 use App\Http\Controllers\reportes\ReportOrdenes;
 
-Route::get('print_boleta/{id_orden}', [OrdenController::class, 'print_boleta']);
+Route::get('print_proforma/{id_orden}', [OrdenController::class, 'print_proforma']);
 Route::get('print_cotizacion/{id_orden}', [CotizacionController::class, 'print_cotizacion']);
 
 Route::get('/admin-'.date('d-m-Y'), function (Request $request) {
@@ -103,6 +104,11 @@ Route::middleware([])->group(function () {
         Route::get('view_servicios', [ServiciosController::class, 'index'])->name('vwservicios');  
         Route::resource('servicios', ServiciosController::class)->names('servicios');
         Route::get('serv_autocompletar/{query}', [ServiciosController::class, 'autocompletar']);// buscardor de servicios
+
+        Route::get('info-locales', [InfoLocalesController::class, 'index'])->name('info-locales.index');
+        Route::post('info-locales', [InfoLocalesController::class, 'store'])->name('info-locales.store');
+        Route::get('info-locales/{id}/edit', [InfoLocalesController::class, 'edit'])->name('info-locales.edit');
+        Route::delete('info-locales/{id}', [InfoLocalesController::class, 'destroy'])->name('info-locales.destroy');
 
         /*CONF MATERIALES*/  
         Route::get('confmaterial-list', [ConfigMaterialController::class, 'getMateriales'])->name('confmaterial.list');  

@@ -91,163 +91,89 @@ class OrdenController extends Controller
                 ->make(true);
     }
 
-    public function print_boleta($id_orden)
+    public function print_proforma($id_orden)
     {
         $datos = DB::table('vw_boleta')->where('id_orden', $id_orden)->orderBy('numeracion')->get();
-
         if ($datos->isEmpty()) {
             abort(404, 'Could not create office or assign it to administrator');
         }
 
-        $this->fpdf->AddPage();
-        $this->fpdf->Image('smartadmin/dist/img/DC_PNG.jpg', 140, 12, 53, 20, 'JPG');
+        $procedencia = strtoupper(str_replace(' ', '_', trim((string) ($datos[0]->procedencia ?? ''))));
+        $infoLocal = DB::table('info_locales')
+            ->whereNull('deleted_at')
+            ->get()
+            ->first(function ($local) use ($procedencia) {
+                $nombreLocal = strtoupper(str_replace(' ', '_', trim((string) ($local->local ?? ''))));
 
-        // Encabezado de la empresa
-        $this->fpdf->SetFont('Arial', 'B', 18);
-        $this->fpdf->SetTextColor(0, 0, 0);
-        $this->fpdf->Cell(150, 10, utf8_decode(strtoupper("PROFORMA N° {$datos[0]->codigo_orden}")), 0, 1, 'L');
+                return $nombreLocal === $procedencia;
+            });
 
-        $this->fpdf->SetFont('Arial', '', 10);
-        $this->fpdf->SetTextColor(39, 39, 51);
-        $empresa_info = [
-            "RUC: 20607329843",
-            "Dirección: Urb. San Lorenzo Av. Malecón Zolezzi 403-A Mro. Melgar - Arequipa",
-            "Teléfono: 054 625743  Celular: 956778012 - 946036052",
-            "Email: dhymarkcompanysac@gmail.com",
-        ];
-        foreach ($empresa_info as $line) {
-            $this->fpdf->Cell(150, 5, utf8_decode($line), 0, 1, 'L');
+        if (!$infoLocal) {
+            abort(404, 'No hay información configurada para el local '.$procedencia.'.');
         }
 
-        $this->fpdf->Ln(5);
+        $telefonoLocal = trim((string) ($infoLocal->telefono ?? ''));
+        if (!empty($infoLocal->celular)) {
+            $telefonoLocal .= ($telefonoLocal !== '' ? '  |  ' : '').'Celular: '.$infoLocal->celular;
+        }
+        if (!empty($infoLocal->celular2)) {
+            $telefonoLocal .= ($telefonoLocal !== '' ? '  -  ' : '').$infoLocal->celular2;
+        }
+        $detalleIds = $datos->pluck('id')->filter()->unique()->values();
+        $insumos = DB::table('vw_ingresos_salidas_insumos')
+            ->whereIn('id_orden_det', $detalleIds)
+            ->get()
+            ->keyBy('id_orden_det');
 
-        // Información general de la orden
-        $this->fpdf->Cell(59, 5, utf8_decode("Local: {$datos[0]->procedencia}"), 0, 0);
-        $this->fpdf->Cell(50, 5, utf8_decode("Fecha de emisión: " . date('d-m-Y H:i')), 0, 1, 'L');
-        $this->fpdf->Cell(80, 5, utf8_decode("Asesor: {$datos[0]->name}"), 0, 1, 'L');
+        $items = [];
+        $totalDetalle = 0;
+        $totalInsumos = 0;
+        foreach ($datos as $data) {
+            $subtotal = (float) $data->precio_unid * (float) $data->cant;
+            $totalDetalle += $subtotal;
 
-        $this->fpdf->Ln(5);
-
-        // Información del cliente
-        $this->fpdf->Cell(90, 5, utf8_decode("Cliente: {$datos[0]->cliente}                                           Ruc:{$datos[0]->ruc}"), 0, 1);
-        $this->fpdf->Cell(75, 5, utf8_decode("Email: {$datos[0]->email}"), 0, 0);
-        $this->fpdf->Cell(60, 5, utf8_decode("Teléfono: {$datos[0]->telefono}"), 0, 1);
-        $this->fpdf->Cell(90, 5, utf8_decode("Dirección: {$datos[0]->direccion}"), 0, 1);
-        $this->fpdf->Cell(120, 5, utf8_decode("Fecha y Hora de entrega: " . date('d-m-Y', strtotime($datos[0]->fecha_entrega)) . " {$datos[0]->hora_entrega}"), 0, 1);
-
-        $this->fpdf->Ln(7);
-
-        // Tabla de productos
-        $this->fpdf->SetFont('Arial', 'B', 10);
-        $this->fpdf->SetFillColor(178, 178, 178);
-        $this->fpdf->Cell(109, 8, utf8_decode("Descripción"), 1, 0, 'C', true);
-        $this->fpdf->Cell(15, 8, utf8_decode("Cant."), 1, 0, 'C', true);
-        $this->fpdf->Cell(25, 8, utf8_decode("Precio"), 1, 0, 'C', true);
-        $this->fpdf->Cell(32, 8, utf8_decode("Subtotal"), 1, 1, 'C', true);
-
-        $this->fpdf->SetFont('Arial', '', 9);
-        $this->fpdf->SetTextColor(39, 39, 51);
-
-        // $total = 0;
-        // foreach ($datos as $data) {
-        //     $subtotal = $data->precio_unid * $data->cant;
-        //     //$this->fpdf->Cell(109, 7, utf8_decode($data->descripcion), 1, 0, 'L');
-        //     // $this->fpdf->Cell(15, 7, utf8_decode($data->cant), 1, 0, 'C');
-        //     // $this->fpdf->Cell(25, 7, utf8_decode(number_format($data->precio_unid, 2)), 1, 0, 'C');
-        //     // $this->fpdf->Cell(32, 7, utf8_decode(number_format($subtotal, 2)), 1, 1, 'C');
-        //     $total += $subtotal;
-        // }
-
-        /*----------  Detalles de la tabla  ----------*/
-        $to=0;
-        $resta_material_dc=0;
-        foreach($datos as $data){
-            $material_dc=DB::table('vw_ingresos_salidas_insumos')->where('id_orden_det',$data->id)->first();
-            if($material_dc){
-                $this->fpdf->Cell(109,7,utf8_decode($material_dc->insumo),'L',0,'L');
-                $this->fpdf->Cell(15,7,utf8_decode($data->cant),'L',0,'C');
-                $this->fpdf->Cell(25,7,utf8_decode(number_format(round($data->precio_unid,2), 2, ',', ' ')),'L',0,'C');    
-                $this->fpdf->Cell(32,7,utf8_decode(number_format(round($data->precio_unid*$data->cant,2), 2, ',', ' ')),'LR',0,'C');
-                $this->fpdf->Ln(7);
-                $resta_material_dc+=number_format((float)$data->precio_unid*$data->cant, 2, '.', '');
+            if (isset($insumos[$data->id])) {
+                $items[] = [
+                    'descripcion' => $insumos[$data->id]->insumo,
+                    'cantidad' => $data->cant,
+                    'precio' => $data->precio_unid,
+                    'subtotal' => $subtotal,
+                ];
+                $totalInsumos += $subtotal;
             }
-            // $this->fpdf->Cell(109,7,utf8_decode($data->descripcion),'L',0,'L');
-            // $this->fpdf->Cell(15,7,utf8_decode($data->cant),'L',0,'C');
-            // $this->fpdf->Cell(25,7,utf8_decode(number_format(round($data->precio_unid,2), 2, ',', ' ')),'L',0,'C');    
-            $y= $data->precio_unid*$data->cant;    
-            // $this->fpdf->Cell(32,7,utf8_decode(number_format(round($data->precio_unid*$data->cant,2), 2, ',', ' ')),'LR',0,'C');
-            // $this->fpdf->Ln(7);
-            $to += $y;
-        }
-           
-        /*----------  Fin Detalles de la tabla  ----------*/
-
-        /** A CUENTA SALDO Y TOTAL */
-        $monto_pagado = DB::table('movimientos')->where('id_orden', $id_orden)->sum('monto');
-        $precio_total = DB::table('orden_detalle')->where('id_orden', $id_orden)->sum('pre_tot');
-        $saldo = number_format((float)$precio_total-$monto_pagado, 2, '.', '');
-
-        $material_dc=DB::table('vw_ingresos_salidas_insumos')->where('id_orden',$data->id_orden)->first();
-        if($material_dc){
-            $this->fpdf->Cell(109,7,"SERVICIO",'LB',0,'L');
-            $this->fpdf->Cell(15,7,"",'LB',0,'C');            
-            $this->fpdf->Cell(25,7,'','LRB',0,'C');
-            $this->fpdf->Cell(32,7,utf8_decode(number_format(round($to-$resta_material_dc,2), 2, ',', ' ')),'LRB',0,'C');
-            $this->fpdf->Ln(7);
         }
 
-        $this->fpdf->Cell(149,7,utf8_decode($datos[0]->des_gen),'LB',0,'L');
-        $this->fpdf->Cell(32,7,"Total:".utf8_decode(number_format(round($precio_total,2), 2, ',', ' ')),'LRB',0,'C');
-        $this->fpdf->Ln(7);
+        $tieneInsumos = count($items) > 0;
+        $montoPagado = (float) DB::table('movimientos')->where('id_orden', $id_orden)->sum('monto');
+        $precioTotal = (float) DB::table('orden_detalle')->where('id_orden', $id_orden)->sum('pre_tot');
+        $saldo = $precioTotal - $montoPagado;
+        // return view('admin.dompdf.proforma', [
+        //     'datos' => $datos,
+        //     'info_local' => $infoLocal,
+        //     'telefono_local' => $telefonoLocal,
+        //     'items' => $items,
+        //     'tiene_insumos' => $tieneInsumos,
+        //     'total_servicio' => $totalDetalle - $totalInsumos,
+        //     'monto_pagado' => $montoPagado,
+        //     'precio_total' => $precioTotal,
+        //     'saldo' => $saldo,
+        //     'fecha_emision' => now()->format('d-m-Y H:i'),
+        // ]);
+        $pdf = PDF::loadView('admin.dompdf.proforma', [
+            'datos' => $datos,
+            'info_local' => $infoLocal,
+            'telefono_local' => $telefonoLocal,
+            'items' => $items,
+            'tiene_insumos' => $tieneInsumos,
+            'total_servicio' => $totalDetalle - $totalInsumos,
+            'monto_pagado' => $montoPagado,
+            'precio_total' => $precioTotal,
+            'saldo' => $saldo,
+            'fecha_emision' => now()->format('d-m-Y H:i'),
+        ]);
+        $pdf->setPaper('A4', 'portrait');
 
-
-        $this->fpdf->SetY(242);
-        $this->fpdf->SetFont('Arial','B',9);
-        if($datos[0]->igv==0){
-            $this->fpdf->Cell(109,7,utf8_decode("Incl. IGV: NO"),'',0,'L');
-        }else{
-            $this->fpdf->Cell(109,7,utf8_decode("Incl. IGV: SI"),'',0,'L');
-        }
-        
-        $this->fpdf->Cell(38,7,utf8_decode("A CUENTA: "),'',0,'R');
-        $this->fpdf->Cell(34,7,utf8_decode("S/. ".$monto_pagado),'',0,'C');
-        $this->fpdf->Ln(5);
-        if($datos[0]->material==0){
-            $this->fpdf->Cell(109,7,utf8_decode("Incl. Material: NO"),'',0,'L');
-        }else{
-            $this->fpdf->Cell(109,7,utf8_decode("Incl. Material: SI"),'',0,'L');
-        }         
-        
-        $this->fpdf->Cell(38,7,utf8_decode("SALDO: "),'',0,'R');
-        $this->fpdf->Cell(34,7,utf8_decode("S/. ".$saldo),'',0,'C');
-        $this->fpdf->Ln(5);
-
-        if($datos[0]->plano==0){
-            $this->fpdf->Cell(109,7,utf8_decode("Incl. Plano: NO"),'',0,'L');
-        }else{
-            $this->fpdf->Cell(109,7,utf8_decode("Incl. Plano: SI"),'',0,'L');
-        }  
-        
-
-        $this->fpdf->Cell(38,7,utf8_decode("TOTAL: "),'',0,'R');
-        $this->fpdf->Cell(34,7,utf8_decode("S/. ".$precio_total),'',0,'C');
-
-    
-        $this->fpdf->Ln(5);
-        
-        $this->fpdf->SetFont('Arial','',6);
-
-        $this->fpdf->SetTextColor(39,39,51);
-        $this->fpdf->Ln(1);
-        $this->fpdf->MultiCell(0,4,utf8_decode("NOTA: "),0,'L',false);
-        $this->fpdf->MultiCell(0,3,utf8_decode("** Una vez entregado el producto y/o servicio no se aceptan cambios ni devoluciones. **"),0,'L',false);
-        $this->fpdf->MultiCell(0,3,utf8_decode("** Los productos deberán ser recogidos dentro de las 24 horas como contrato pagará derecho de almacenamiento. **"),0,'L',false);
-        $this->fpdf->MultiCell(0,3,utf8_decode("** La empresa no se responsabiliza por trabajos y/o productos que no han sido recogidos en la fecha pactada. **"),0,'L',false);
-        $this->fpdf->MultiCell(0,3,'Sistemas para empresas WebSoftAqp 927245347',0,'C',false);
-
-
-        # Nombre del archivo PDF #
-        $this->fpdf->Output("I","Proforma_".$datos[0]->cliente."_".$datos[0]->codigo_orden.".pdf",true);
+        return $pdf->stream('Proforma_'.$datos[0]->codigo_orden.'.pdf');
     }
 
 
@@ -861,6 +787,14 @@ class OrdenController extends Controller
     public function print_ticket_png($id_orden){   
         // este codigo funciona en produccion
         $datos = DB::table('vw_boleta')->where('id_orden', $id_orden)->orderBy('numeracion')->get();
+        $procedencia = strtoupper(str_replace(' ', '_', trim((string) ($datos[0]->procedencia ?? ''))));
+        $infoLocal = DB::table('info_locales')->whereNull('deleted_at')->get()->first(function ($local) use ($procedencia) {
+            return strtoupper(str_replace(' ', '_', trim((string) ($local->local ?? '')))) === $procedencia;
+        });
+        if (!$infoLocal) { abort(404, 'No hay información configurada para el local '.$procedencia.'.'); }
+        $telefonoLocal = trim((string) ($infoLocal->telefono ?? ''));
+        if (!empty($infoLocal->celular)) { $telefonoLocal .= ($telefonoLocal !== '' ? ' - ' : '').$infoLocal->celular; }
+        if (!empty($infoLocal->celular2)) { $telefonoLocal .= ($telefonoLocal !== '' ? ' - ' : '').$infoLocal->celular2; }
         //Dimensiones en píxeles para una imagen de 62mm x 100mm a 150 DPI
         $width = 366;
         $height = 590;
@@ -871,16 +805,22 @@ class OrdenController extends Controller
         $overlayImagePath = url('smartadmin/dist/img/DC_PNG.jpg');//'https://' . $domain . '/smartadmin/dist/img/DC_PNG.jpg';//public_path('smartadmin/dist/img/DC_PNG.jpg');
         $overlayImage = Image::make($overlayImagePath)->resize(335, 95); 
         $img->insert($overlayImage, 'top-left', 16, 20);
-      
-        $img->text(utf8_decode('Urb. San Lorenzo Av. Malecón Zolezzi 403-A'), 25, 140, function($font){$font->file(3); });
-        $img->text('Mariano Melgar - Arequipa', 90, 157, function($font){$font->file(3); });
-        $img->text('Cel. 956778012 - 946036052 Tel. 054-625743', 20, 174, function($font){$font->file(3); });
+
+        $direccion = wordwrap(utf8_decode((string) $infoLocal->direccion), 45, "\n", true);
+        $lineasDireccion = explode("\n", $direccion);
+        foreach ($lineasDireccion as $indice => $lineaDireccion) {
+            $anchoLinea = strlen($lineaDireccion) * imagefontwidth(3);
+            $xDireccion = max(0, ($width - $anchoLinea) / 2);
+            $img->text($lineaDireccion, $xDireccion, 140 + ($indice * 17), function($font){$font->file(3); });
+        }
+        $desplazamientoDireccion = max(0, (count($lineasDireccion) - 2) * 17);
+        $img->text(utf8_decode($telefonoLocal), 20, 174 + $desplazamientoDireccion, function($font){$font->file(3); });
         
-        $img->text('Cliente:', 140, 194, function($font){$font->file(5); });
+        $img->text('Cliente:', 140, 194 + $desplazamientoDireccion, function($font){$font->file(5); });
 
         $text = utf8_decode($datos[0]->cliente);
         $fontSize = 18;
-        $yPosition = 200; // Ajusta esta posición según tus necesidades      
+        $yPosition = 200 + $desplazamientoDireccion; // Ajusta esta posición según tus necesidades      
         $tempImg = Image::canvas(1, 1);
         $tempImg->text($text, 0, 0, function($font) use ($fontSize) {
             $font->file(5);
@@ -898,21 +838,21 @@ class OrdenController extends Controller
         });
         
        
-        $img->text('Cod. Orden :  '.$datos[0]->codigo_orden, 16, 235, function($font){ $font->file(3); });
-        $img->text('Fecha Creacion:  ' .date('d-m-Y', strtotime($datos[0]->fch_create)), 16, 252, function($font){ $font->file(3); });
-        $img->text('Fecha Imp.: ' .date('d-m-Y'). '   Hora: ' .date('H:i'), 16, 269, function($font){ $font->file(3); });
-        $img->text('Recepcionista:  ' .utf8_decode($datos[0]->name), 16, 286, function($font){ $font->file(3); });
-        $img->text('Telf. Cliente:  ' .utf8_decode($datos[0]->telefono), 16, 303, function($font){ $font->file(3); });
+        $img->text('Cod. Orden :  '.$datos[0]->codigo_orden, 16, 235 + $desplazamientoDireccion, function($font){ $font->file(3); });
+        $img->text('Fecha Creacion:  ' .date('d-m-Y', strtotime($datos[0]->fch_create)), 16, 252 + $desplazamientoDireccion, function($font){ $font->file(3); });
+        $img->text('Fecha Imp.: ' .date('d-m-Y'). '   Hora: ' .date('H:i'), 16, 269 + $desplazamientoDireccion, function($font){ $font->file(3); });
+        $img->text('Recepcionista:  ' .utf8_decode($datos[0]->name), 16, 286 + $desplazamientoDireccion, function($font){ $font->file(3); });
+        $img->text('Telf. Cliente:  ' .utf8_decode($datos[0]->telefono), 16, 303 + $desplazamientoDireccion, function($font){ $font->file(3); });
       
-        $link_qr="https://dcmetales.com/print_boleta/".$datos[0]->id_orden;
+        $link_qr=url('/print_boleta/'.$datos[0]->id_orden);
         $overlayImage = Image::make("https://image-charts.com/chart?chs=180x180&cht=qr&chl=".urlencode($link_qr))->resize(220, 220); 
-        $img->insert($overlayImage, '', 75, 313);
+        $img->insert($overlayImage, '', 75, 313 + $desplazamientoDireccion);
 
         $overlayImagePath = url('smartadmin/dist/img/FONDO_QR.png');//'https://' . $domain . '/smartadmin/dist/img/FONDO_QR.png';//public_path('smartadmin/dist/img/FONDO_QR.png');
         $overlayImage = Image::make($overlayImagePath)->resize(230, 225); 
-        $img->insert($overlayImage, '', 70, 310);
+        $img->insert($overlayImage, '', 70, 310 + $desplazamientoDireccion);
 
-        $img->text('Sistemas para empresas WebSoftAqp 927245347', 50, 570, function($font){ $font->file(2); });
+        $img->text('Gracias por su preferencia', 50, 570 + $desplazamientoDireccion, function($font){ $font->file(2); });
         
     
         $directory = base_path('public_html/storage/qr/');//'https://' . $domain . '/storage/qr/'; //public_path('storage/qr/');      
@@ -927,6 +867,104 @@ class OrdenController extends Controller
         return response($imageData, 200)
             ->header('Content-Type', 'image/png')
             ->header('Content-Disposition', "attachment; filename=QR_generada_".$datos[0]->codigo_orden.".png");
+
+
+
+        // este codigo funciona en localhost
+        // $datos = DB::table('vw_boleta')->where('id_orden', $id_orden)->orderBy('numeracion')->get();
+        // $procedencia = strtoupper(str_replace(' ', '_', trim((string) ($datos[0]->procedencia ?? ''))));
+        // $infoLocal = DB::table('info_locales')
+        //     ->whereNull('deleted_at')
+        //     ->get()
+        //     ->first(function ($local) use ($procedencia) {
+        //         $nombreLocal = strtoupper(str_replace(' ', '_', trim((string) ($local->local ?? ''))));
+
+        //         return $nombreLocal === $procedencia;
+        //     });
+
+        // if (!$infoLocal) {
+        //     abort(404, 'No hay información configurada para el local '.$procedencia.'.');
+        // }
+
+        // $telefonoLocal = 'Telf: '.trim((string) ($infoLocal->telefono ?? ''));
+        // if (!empty($infoLocal->celular)) {
+        //     $telefonoLocal .= '   Cel: '.($telefonoLocal !== '' ? '' : '').$infoLocal->celular;
+        // }
+        // if (!empty($infoLocal->celular2)) {
+        //     $telefonoLocal .= ($telefonoLocal !== '' ? ' - ' : '').$infoLocal->celular2;
+        // }
+        // //Dimensiones en píxeles para una imagen de 62mm x 100mm a 150 DPI
+        // $width = 366;
+        // $height = 590;
+
+        // //Crear una instancia de la imagen
+        // $img = Image::canvas($width, $height, '#ffffff');
+
+        // $overlayImagePath = public_path('smartadmin/dist/img/DC_PNG.jpg');//'https://' . $domain . '/smartadmin/dist/img/DC_PNG.jpg';//public_path('smartadmin/dist/img/DC_PNG.jpg');
+        // $overlayImage = Image::make($overlayImagePath)->resize(335, 95); 
+        // $img->insert($overlayImage, 'top-left', 16, 20);
+
+        // $direccion = wordwrap(utf8_decode((string) $infoLocal->direccion), 45, "\n", true);
+        // $lineasDireccion = explode("\n", $direccion);
+        // foreach ($lineasDireccion as $indice => $lineaDireccion) {
+        //     $anchoLinea = strlen($lineaDireccion) * imagefontwidth(3);
+        //     $xDireccion = max(0, ($width - $anchoLinea) / 2);
+        //     $img->text($lineaDireccion, $xDireccion, 140 + ($indice * 17), function($font){$font->file(3); });
+        // }
+        // $desplazamientoDireccion = max(0, (count($lineasDireccion) - 2) * 17);
+        // $img->text(utf8_decode($telefonoLocal), 20, 174 + $desplazamientoDireccion, function($font){$font->file(3); });
+        
+        // $img->text('Cliente:', 140, 194 + $desplazamientoDireccion, function($font){$font->file(5); });
+
+        // $text = utf8_decode($datos[0]->cliente);
+        // $fontSize = 18;
+        // $yPosition = 200 + $desplazamientoDireccion; // Ajusta esta posición según tus necesidades      
+        // $tempImg = Image::canvas(1, 1);
+        // $tempImg->text($text, 0, 0, function($font) use ($fontSize) {
+        //     $font->file(5);
+        //     $font->size($fontSize);
+        // });
+        // $textWidth = strlen($text)*10;
+        // $xPosition = ($width - $textWidth)/2;
+
+        // $img->text($text, $xPosition, $yPosition, function($font) use ($fontSize) {
+        //     $font->file(5);
+        //     $font->size($fontSize);
+        //     $font->color('#000000'); // Color del texto
+        //     $font->align('left'); // Alineación horizontal (ya no se necesita centrado aquí)
+        //     $font->valign('top'); // Alineación vertical desde arriba
+        // });
+        
+       
+        // $img->text('Cod. Orden :  '.$datos[0]->codigo_orden, 16, 235 + $desplazamientoDireccion, function($font){ $font->file(3); });
+        // $img->text('Fecha Creacion:  ' .date('d-m-Y', strtotime($datos[0]->fch_create)), 16, 252 + $desplazamientoDireccion, function($font){ $font->file(3); });
+        // $img->text('Fecha Imp.: ' .date('d-m-Y'). '   Hora: ' .date('H:i'), 16, 269 + $desplazamientoDireccion, function($font){ $font->file(3); });
+        // $img->text('Asesor:  ' .utf8_decode($datos[0]->usuario), 16, 286 + $desplazamientoDireccion, function($font){ $font->file(3); });
+        // $img->text('Telf. Cliente:  ' .utf8_decode($datos[0]->telefono), 16, 303 + $desplazamientoDireccion, function($font){ $font->file(3); });
+      
+        // $link_qr=url('/print_boleta/'.$datos[0]->id_orden);
+        // $overlayImage = Image::make("https://image-charts.com/chart?chs=180x180&cht=qr&chl=".urlencode($link_qr))->resize(220, 220); 
+        // $img->insert($overlayImage, '', 75, 313 + $desplazamientoDireccion);
+
+        // $overlayImagePath = public_path('smartadmin/dist/img/FONDO_QR.png');//'https://' . $domain . '/smartadmin/dist/img/FONDO_QR.png';//public_path('smartadmin/dist/img/FONDO_QR.png');
+        // $overlayImage = Image::make($overlayImagePath)->resize(230, 225); 
+        // $img->insert($overlayImage, '', 70, 310 + $desplazamientoDireccion);
+
+        // $img->text('Gracias por su preferencia', 50, 570, function($font){ $font->file(2); });
+        
+    
+        // $directory = public_path('storage/qr/');//'https://' . $domain . '/storage/qr/'; //public_path('storage/qr/');      
+        // if (!File::exists($directory)) {
+        //     File::makeDirectory($directory, 0755, true);
+        // }
+                
+        // $filePath = $directory . '/QR_generada_'.$datos[0]->codigo_orden.'.png';
+        
+        // $img->save($filePath);
+        // $imageData = (string) $img->encode('png');
+        // return response($imageData, 200)
+        //     ->header('Content-Type', 'image/png')
+        //     ->header('Content-Disposition', "attachment; filename=QR_generada_".$datos[0]->codigo_orden.".png");
     }
 
     public function print_ticket_pdf($id_orden){
@@ -935,51 +973,96 @@ class OrdenController extends Controller
      
         
         if(!isset($datos[0])){
-            abort(404, 'Could not create office or assign it to administrator');
+            abort(404, 'No hay información configurada para la orden '.$id_orden.'.');
         }else{
+            $procedencia = strtoupper(str_replace(' ', '_', trim((string) ($datos[0]->procedencia ?? ''))));
+            $infoLocal = DB::table('info_locales')
+                ->whereNull('deleted_at')
+                ->get()
+                ->first(function ($local) use ($procedencia) {
+                    $nombreLocal = strtoupper(str_replace(' ', '_', trim((string) ($local->local ?? ''))));
+
+                    return $nombreLocal === $procedencia;
+                });
+
+            if (!$infoLocal) {
+                abort(404, 'No hay información configurada para el local '.$procedencia.'.');
+            }
+
+            $telefonoLocal = trim((string) ($infoLocal->telefono ?? ''));
+            if (!empty($infoLocal->celular)) {
+                $telefonoLocal .= ($telefonoLocal !== '' ? '  ' : '').'Cel: '.$infoLocal->celular;
+            }
+            if (!empty($infoLocal->celular2)) {
+                $telefonoLocal .= ($telefonoLocal !== '' ? ' - ' : '').$infoLocal->celular2;
+            }
             $this->fpdf = new Fpdf('P','mm',array(70,110));
-            $datos = DB::table('vw_boleta')->where('id_orden', $id_orden)->get();
-            $this->fpdf->AddPage();        
+            $this->fpdf->SetAutoPageBreak(false, 0);
+            $this->fpdf->AddPage();
+            $this->fpdf->SetLeftMargin(5);
             $this->fpdf->Image('smartadmin/dist/img/DC_PNG.jpg', '5','4','60','15','JPG');
-            $this->fpdf->Ln(10);
-            $this->fpdf->SetFont('Helvetica','', 8);       
-            $this->fpdf->Cell(50,4,utf8_decode('Urb. San Lorenzo Av. Malecón Zolezzi 403-A'),0,1,'C');
-            $this->fpdf->Cell(50,4,'Mro. Melgar - Arequipa',0,1,'C');
-            $this->fpdf->Cell(50,4,'Cel. 956778012 - 946036052  Tel. 054 625743',0,1,'C');
+            $this->fpdf->SetY(20);
+            $lineaAjustada = function ($texto, $ancho, $tamano, $minimo, $estilo = '', $alineacion = 'C') {
+                $texto = utf8_decode((string) $texto);
+                $cabeEnUnaLinea = false;
+                for ($fuente = $tamano; $fuente >= $minimo; $fuente--) {
+                    $this->fpdf->SetFont('Helvetica', $estilo, $fuente);
+                    if ($this->fpdf->GetStringWidth($texto) <= $ancho) {
+                        $cabeEnUnaLinea = true;
+                        break;
+                    }
+                }
+                if ($cabeEnUnaLinea) {
+                    $this->fpdf->Cell($ancho, 3.5, $texto, 0, 1, $alineacion);
+                } else {
+                    $this->fpdf->MultiCell($ancho, 3.5, $texto, 0, $alineacion);
+                }
+            };           
             
+            $this->fpdf->SetX(5);
+            $this->fpdf->SetFont('Helvetica', '', 7);
+            $this->fpdf->MultiCell(60,3.5,utf8_decode((string) ($infoLocal->direccion ?? '')),0,'C');
+            $this->fpdf->SetX(5);
+            $lineaAjustada('Tel: '.$telefonoLocal, 60, 7, 4);
+            $this->fpdf->SetX(5);
             
 
-            // DATOS FACTURA        
-            $this->fpdf->Ln(1);
-            $this->fpdf->SetFont('Helvetica','B',10);
-            $this->fpdf->Cell(50,4,'Cliente:',0,1,'C');
-            $this->fpdf->Cell(50,4,utf8_decode($datos[0]->cliente),0,1,'C');
-            $this->fpdf->SetFont('Helvetica', '', 8);
+            $this->fpdf->Ln(3);
+            $this->fpdf->SetFont('Helvetica','B',9);
+            $this->fpdf->SetX(4);
+            $this->fpdf->Cell(60,3.5,'Cliente:',0,1,'C');
             $this->fpdf->SetX(5);
-            $this->fpdf->Cell(60,4,'Cod. Orden :  ' .$datos[0]->codigo_orden,0,1,'L');
-            $this->fpdf->SetX(5);
-            $this->fpdf->Cell(60,4,'Fecha Creacion.:  ' .date('d-m-Y', strtotime($datos[0]->fch_create)),0,1,'L');
-            $this->fpdf->SetX(5);
-            $this->fpdf->Cell(60,4,'Fecha Imp.: ' .date('d-m-Y'). '          Hora:  ' .date('H:i'),0,1,'L');
-            $this->fpdf->SetX(5);
-            $this->fpdf->Cell(60,4,'Recepcionista:  ' .utf8_decode($datos[0]->name),0,1,'L');
-            $this->fpdf->SetX(5);
-            $this->fpdf->Cell(60,4,'Telf.Cliente:  ' .$datos[0]->telefono,0,1,'L');
-            
-            
+            $lineaAjustada($datos[0]->cliente, 60, 9, 6, 'B');
+            $this->fpdf->Ln(3);
             $this->fpdf->SetFont('Helvetica', '', 7);
+            $this->fpdf->SetX(5);
+            $lineaAjustada('Cod. Orden: '.$datos[0]->codigo_orden, 60, 7, 5, '', 'L');
+            $this->fpdf->SetX(5);
+            $lineaAjustada('Fecha Creación: '.date('d-m-Y', strtotime($datos[0]->fch_create)), 60, 7, 5, '', 'L');
+            $this->fpdf->SetX(5);
+            $lineaAjustada('Fecha Imp.: '.date('d-m-Y').'  Hora: '.date('H:i'), 60, 7, 5, '', 'L');
+            $this->fpdf->SetX(5);
+            $lineaAjustada('Asesor: '.$datos[0]->usuario, 60, 7, 5, '', 'L');
+            $this->fpdf->SetX(5);
+            $lineaAjustada('Telf. Cliente: '.$datos[0]->telefono, 60, 7, 5, '', 'L');
+
             //$link_qr="https://dhymarkperu.com/print_boleta/".encrypt($datos[0]->id_orden);
-            $link_qr="https://dcmetales.com/print_boleta/".$datos[0]->id_orden;
-            $this->fpdf->Image("https://image-charts.com/chart?chs=180x180&cht=qr&chl=".urlencode($link_qr), 15, 62, 40, 40, "png");
-            $this->fpdf->Image('smartadmin/dist/img/FONDO_QR.png', '15','62','40','40.5','png');
-     
-            // PIE DE PAGINA
-            //$this->fpdf->Ln(60);
-            //$this->fpdf->text(15,103,'GRACIAS POR SU PREFERENCIA',0,1,'C');    
-            $this->fpdf->Ln(1);    
+            $link_qr=url('/print_boleta/'.$datos[0]->id_orden);
+            $qrMaxY = 97;
+            $qrY = $this->fpdf->GetY() + 1;
+            $qrSize = min(36, $qrMaxY - $qrY);
+            if ($qrSize > 0) {
+                $qrX = (70 - $qrSize) / 2;
+                $this->fpdf->Image("https://image-charts.com/chart?chs=180x180&cht=qr&chl=".urlencode($link_qr), $qrX, $qrY, $qrSize, $qrSize, "png");
+                $this->fpdf->Image('smartadmin/dist/img/FONDO_QR.png', $qrX, $qrY, $qrSize, $qrSize + 0.5, 'png');
+            }
+
+            $this->fpdf->SetXY(5, 100);
+            $this->fpdf->SetFont('Helvetica', '', 6);
+            $this->fpdf->Cell(60, 3, 'GRACIAS POR SU PREFERENCIA', 0, 1, 'C');
+            $this->fpdf->SetXY(5, 105);
             $this->fpdf->SetFont('Helvetica', '', 7);
-            $this->fpdf->text(7,106,'Sistemas para empresas WebSoftAqp 927245347');
-            
+            // $this->fpdf->Cell(60, 3, 'Sistemas para empresas WebSoftAqp 927245347', 0, 0, 'C');
             
             //abrir
             $this->fpdf->Output('ORDEN-'.$datos[0]->codigo_orden.'.pdf','i');
@@ -993,18 +1076,41 @@ class OrdenController extends Controller
         $datos = DB::table('vw_boleta')->where('id_orden', $id_orden)->orderBy('numeracion')->get();
         // dd($datos);
         if(!isset($datos[0])){
-            abort(404, 'Could not create office or assign it to administrator');
+            abort(404, 'No hay información configurada para la orden '.$id_orden.'.');
         }else{
+            $procedencia = strtoupper(str_replace(' ', '_', trim((string) ($datos[0]->procedencia ?? ''))));
+            $infoLocal = DB::table('info_locales')
+                ->whereNull('deleted_at')
+                ->get()
+                ->first(function ($local) use ($procedencia) {
+                    $nombreLocal = strtoupper(str_replace(' ', '_', trim((string) ($local->local ?? ''))));
+
+                    return $nombreLocal === $procedencia;
+                });
+
+            if (!$infoLocal) {
+                abort(404, 'No hay información configurada para el local '.$procedencia.'.');
+            }
+
+            $telefonoLocal = trim((string) ($infoLocal->telefono ?? ''));
+            if (!empty($infoLocal->celular)) {
+                $telefonoLocal .= ($telefonoLocal !== '' ? '  ' : '').'Cel: '.$infoLocal->celular;
+            }
+            if (!empty($infoLocal->celular2)) {
+                $telefonoLocal .= ($telefonoLocal !== '' ? ' - ' : '').$infoLocal->celular2;
+            }
+
             $this->fpdf = new Fpdf('P','mm',array(80,150));
             // $datos = DB::table('vw_boleta')->where('id_orden', $id_orden)->get();
             $this->fpdf->AddPage();        
             $this->fpdf->Image('smartadmin/dist/img/DC_PNG.jpg', '10','7','60','20','JPG');
             $this->fpdf->Ln(19);
             $this->fpdf->SetFont('Helvetica','', 8);
-            $this->fpdf->Cell(60,4,utf8_decode("RUC: 20455462844"),0,1,'C');      
-            $this->fpdf->Cell(60,4,utf8_decode('Urb. San Lorenzo Av. Malecón Zolezzi 403-A'),0,1,'C');
-            $this->fpdf->Cell(60,4,'Mro. Melgar - Arequipa',0,1,'C');
-            $this->fpdf->Cell(60,4,'Cel. 956778012 - 946036052  Tel. 054 625743',0,1,'C');
+            $this->fpdf->Cell(60,4,utf8_decode('RUC: '.(string) $infoLocal->ruc),0,1,'C');
+            $this->fpdf->MultiCell(60,4,utf8_decode((string) $infoLocal->direccion),0,'C');
+            $this->fpdf->MultiCell(60,4,utf8_decode($telefonoLocal),0,'C');
+            $this->fpdf->MultiCell(60,4,utf8_decode((string) $infoLocal->email),0,'C');
+            $this->fpdf->Cell(60,4,utf8_decode('Local: '.(string) $infoLocal->local),0,1,'C');
             
             
 
@@ -1017,7 +1123,7 @@ class OrdenController extends Controller
             $this->fpdf->Cell(60,4, utf8_decode('Proforma N°- ').$datos[0]->codigo_orden,0,1,'');
             // $this->fpdf->Cell(60,4, utf8_decode('Fecha Emisión.:  ') .date('d-m-Y', strtotime($datos[0]->fch_create)),0,1,'');
             $this->fpdf->Cell(60,4,'Fecha Imp.: ' .date('d-m-Y'). '          Hora Imp.:  ' .date('H:i'),0,1,'');
-            $this->fpdf->Cell(60,4,'Asesor:  ' .$datos[0]->name,0,1,'L');
+            $this->fpdf->Cell(60,4,'Asesor:  ' .$datos[0]->usuario,0,1,'L');
             $this->fpdf->Cell(60,4,'Ruc:  ' .$datos[0]->ruc,0,0,'L');
             // COLUMNAS
             
@@ -1152,9 +1258,9 @@ class OrdenController extends Controller
             // PIE DE PAGINA
             //$this->fpdf->Ln(60);
             $this->fpdf->text(23,137,'GRACIAS POR SU PREFERENCIA',0,1,'C');    
-            $this->fpdf->Ln(1);    
-            $this->fpdf->SetFont('Helvetica', '', 6);
-            $this->fpdf->text(17,140,'Sistemas para empresas WebSoftAqp 927245347');
+            // $this->fpdf->Ln(1);    
+            // $this->fpdf->SetFont('Helvetica', '', 6);
+            // $this->fpdf->text(17,140,'Sistemas para empresas WebSoftAqp 927245347');
             
             
             //abrir
@@ -1449,4 +1555,3 @@ class OrdenController extends Controller
     //     }
         
     // }
-

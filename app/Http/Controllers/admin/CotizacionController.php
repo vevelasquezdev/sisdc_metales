@@ -374,7 +374,42 @@ class CotizacionController extends Controller
         $datos = DB::table('vw_cotizacion')
                 ->where('id', $id_orden)                
                 ->get();
-       
+
+        $procedencia = strtoupper(str_replace(' ', '_', trim($datos[0]->procedencia ?? '')));
+        if (!in_array($procedencia, ['ZOLEZZI', 'RIO_SECO'], true)) {
+            abort(404, 'La cotización no tiene una procedencia válida para cargar los datos del local.');
+        }
+
+        $infoLocal = DB::table('info_locales')
+            ->whereNull('deleted_at')
+            ->get()
+            ->first(function ($local) use ($procedencia) {
+                $nombreLocal = strtoupper(str_replace(' ', '_', trim($local->local ?? '')));
+
+                return $nombreLocal === $procedencia;
+            });
+
+        if (!$infoLocal) {
+            abort(404, 'No hay información configurada para el local '.$procedencia.'.');
+        }
+
+        $cuentasPdf = [];
+        $cuentasBancarias = [
+            'cta_cte_bcp_soles',
+            'cta_cci_bcp_soles',
+            'cta_cte_bcp_dolares',
+            'cta_cci_bcp_dolares',
+            'cta_cte_interbank_soles',
+            'cta_cci_interbank_soles',
+            'cta_cte_interbank_dolares',
+            'cta_cci_interbank_dolares',
+        ];
+        foreach ($cuentasBancarias as $cuenta) {
+            $visible = strtolower((string) ($infoLocal->{$cuenta.'_check'} ?? ''));
+            $cuentasPdf[$cuenta] = !empty($infoLocal->{$cuenta}) &&
+                in_array($visible, ['1', 't', 'true', 'yes', 'on'], true);
+        }
+
         $total = DB::table('vw_boleta_cotizacion')
             ->where('id_orden', $id_orden)
             ->selectRaw('COALESCE(SUM(cant * precio_unid),0) as total')
@@ -408,9 +443,53 @@ class CotizacionController extends Controller
         }
         // ────────────────────────────────────────────────────────────
         
-        $hayTotal = $total > 0;
+        $hayTotal = $total > 0;   
+        
+        // $pdf =  [
+        //     'info_local'         => $infoLocal,
+        //     'cuentas_pdf'        => $cuentasPdf,
+        //     'qr_pago'            => $infoLocal->qr_pago,
+        //     'codigo'             => $datos[0]->codigo,
+        //     'empresa'            => $datos[0]->raz_soc,
+        //     'ruc'                => $datos[0]->ruc ?? '',
+        //     'contacto'           => $datos[0]->cliente ?? '',
+        //     'telefono_cliente'   => $datos[0]->telefono,
+        //     'proyecto'           => $datos[0]->des_gen,
+        //     'asesor_nombre'      => $datos[0]->usuario,
+        //     'asesor_email'       => $datos[0]->user_email,
+        //     'asesor_telefono'    => $datos[0]->user_telefono ?? '',
+        //     'tiempo_entrega'     => $datos[0]->tiempo_entrega ?? '',
+
+        //     'item1_descripcion'  => $datos[0]->descripcion_1 ?? '',
+        //     'item1_cantidad'     => $datos[0]->cantidad_1 ?? null,
+        //     'item1_precio'       => $datos[0]->pre_unitario_1 ?? null,
+
+        //     'item2_descripcion'  => $datos[0]->descripcion_2 ?? '',
+        //     'item2_cantidad'     => $datos[0]->cantidad_2 ?? null,
+        //     'item2_precio'       => $datos[0]->pre_unitario_2 ?? null,
+
+        //     'item3_descripcion'  => $datos[0]->descripcion_3 ?? '',
+        //     'item3_cantidad'     => $datos[0]->cantidad_3 ?? null,
+        //     'item3_precio'       => $datos[0]->pre_unitario_3 ?? null,
+
+        //     'imagen_referencial' => $datos[0]->ruta_url ?? null,
+        //     'observaciones'      => $datos[0]->observacion ?? null,
+
+        //     // TOTALES
+        //     'subtotal'           => $subtotal,
+        //     'igv'                => $igv,
+        //     'total'              => $total,
+        //     'hayTotal'           => $hayTotal,
+        //     'simbolo'            => $simbolo,
+        // ];
+        // dd($pdf);
+        
+        // return view('admin.dompdf.cotizacion', compact('pdf'));
 
         $pdf = PDF::loadView('admin.dompdf.cotizacion', [
+            'info_local'         => $infoLocal,
+            'cuentas_pdf'        => $cuentasPdf,
+            'qr_pago'            => $infoLocal->qr_pago,
             'codigo'             => $datos[0]->codigo,
             'empresa'            => $datos[0]->raz_soc,
             'ruc'                => $datos[0]->ruc ?? '',
