@@ -410,26 +410,20 @@
             <tr>
                 <td style="width:78%;">
                     <table border="0" cellpadding="0" cellspacing="2">
-                        <tr>
-                            <td style="padding-right:3px; vertical-align:top;">
-                                <div style="width:7px; height:7px; background:#CC1E1E; border-radius:50% 50% 50% 0; display:inline-block;"></div>
-                            </td>
-                            <td style="font-size:6.5pt;">
-                                <b>Sede 1:</b> Urb. San Lorenzo, Calle Malecón Zolezzi 403-A — Mariano Melgar
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style="padding-right:3px; vertical-align:top;">
-                                <div style="width:7px; height:7px; background:#CC1E1E; border-radius:50% 50% 50% 0; display:inline-block;"></div>
-                            </td>
-                            <td style="font-size:6.5pt;">
-                                <b>Sede 2:</b> Av. Argentina Mz E Lote 7B — Cerro Colorado
-                            </td>
-                        </tr>
+                        @foreach($info_locales as $index => $info_local)
+                            <tr>
+                                <td style="padding-right:3px; vertical-align:top;">
+                                    <div style="width:7px; height:7px; background:#CC1E1E; border-radius:50% 50% 50% 0; display:inline-block;"></div>
+                                </td>
+                                <td style="font-size:6.5pt;">
+                                    <b>Sede {{ $index + 1 }}:</b> {{ $info_local->direccion }}
+                                </td>
+                            </tr>
+                        @endforeach
                     </table>
                 </td>
                 <td style="width:22%; text-align:right; vertical-align:middle; padding-right:22px;">
-                    <div class="web-label">www.dcmetalesperu.pe</div>
+                    <div class="web-label">{{ $info_locales->first()->link_web ?? '' }}</div>
                 </td>
             </tr>
         </table>

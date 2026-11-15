@@ -60,15 +60,27 @@ class OrdenController extends Controller
                     return $row->id_estado;                            
                 })
                 ->addColumn('entrega', function($row){
-                    if(empty($row->entrega)){
+                    $entrega = (string) $row->entrega;
+
+                    if($entrega === '0'){
                         return '';
                     }
 
-                    if($row->entrega==1){
+                    if($entrega === '1'){
                         return "<span class='badge badge-success badge-pill'>SI</span>";
                     }
 
-                    return "<span class='badge badge-success badge-pill'> ".$row->entrega." </span>";
+                    if($entrega !== ''){
+                        return "<span class='badge badge-success badge-pill'>".Carbon::parse($entrega)->format('d-m-Y')."</span>";
+                    }
+
+                    if($row->pago_caja == 1){
+                        return "<button onclick='realizar_entrega(".$row->id.")' class='btn btn-primary btn-sm' data-toggle='modal'
+                                    data-target='.default-example-modal-right' title='Realizar entrega del producto'><i class='fa fa-thumbs-up'></i>
+                                </button>";
+                    }
+
+                    return '';
                 })
                 ->addColumn('pago_caja', function($row){
                     if($row->pago_caja==0){                        
@@ -1288,6 +1300,11 @@ class OrdenController extends Controller
                     ->where('id', $id_orden)
                     ->get();
 
+        $info_locales = DB::table('info_locales')
+                    ->whereNull('deleted_at')
+                    ->orderBy('id')
+                    ->get(['direccion', 'link_web']);
+
         $map_material = [
             'ma36'         => 'A36',
             'ma201'        => '201',
@@ -1347,6 +1364,7 @@ class OrdenController extends Controller
             'observaciones_generales' => $datos[0]->observaciones ?? '',
             'aprobado_cliente'        => $datos[0]->aprobado_cliente ?? false,
             'proceso_data'            => $proceso_data,   // ← array listo para el blade
+            'info_locales'            => $info_locales,
         ]);
 
         $pdf->setPaper('A5', 'landscape');
