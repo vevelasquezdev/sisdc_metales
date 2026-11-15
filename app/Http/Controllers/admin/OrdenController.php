@@ -60,15 +60,15 @@ class OrdenController extends Controller
                     return $row->id_estado;                            
                 })
                 ->addColumn('entrega', function($row){
-                    if($row->entrega==0){ 
-                        if($row->pago_caja==1 && $row->id_estado==2){
-                            return "<button onclick='realizar_entrega(".$row->id.")' class='btn btn-primary btn-sm' data-toggle='modal' 
-                                    data-target='.default-example-modal-right' title='Realizar entrega del producto'><i class='fa fa-thumbs-up'></i>
-                                </button>";
-                        }
-                    }else{
-                        return "<span class='badge badge-success badge-pill'> SI </span>";
-                    }            
+                    if(empty($row->entrega)){
+                        return '';
+                    }
+
+                    if($row->entrega==1){
+                        return "<span class='badge badge-success badge-pill'>SI</span>";
+                    }
+
+                    return "<span class='badge badge-success badge-pill'> ".$row->entrega." </span>";
                 })
                 ->addColumn('pago_caja', function($row){
                     if($row->pago_caja==0){                        
@@ -187,7 +187,7 @@ class OrdenController extends Controller
 
     public function realizar_entrega_producto($id_orden){
         DB::table('orden')->where('id',$id_orden)->update([ //orden detalle actual
-            'entrega'        => 1
+            'entrega'        => now()->format('d-m-Y')
         ]);
         return response()->json(['msg'=>'Se realizo el cambio de estado a Entregado.'], 200);
     }
