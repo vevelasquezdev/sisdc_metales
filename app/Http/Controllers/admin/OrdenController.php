@@ -49,7 +49,7 @@ class OrdenController extends Controller
                    
                        $buttons = '<div style="display:flex; gap:4px; justify-content:center; align-items:center;">
                             <button class="btn btn-primary btn-sm" onclick="AbrirOrdenServicio('.$row->id.','.$row->id_user.',&quot;'.$row->rol.'&quot;,'.$row->id_cliente.')" data-toggle="modal" data-target=".default-example-modal-right" title="Abrir Orden de Servicio"><i class="fa fa-clipboard"></i></button>
-                            <button class="btn btn-info btn-sm" type="button" onclick="hoja_produccion('.$row->id.')" data-toggle="tooltip" title="Imprimir Cotización"><i class="fal fa-print"></i></button>';
+                            <button class="btn btn-info btn-sm" type="button" onclick="hoja_produccion('.$row->id.')" data-toggle="tooltip" title="Imprimir Hoja de Ruta"><i class="fal fa-print"></i></button>';
 
                         if($row->ruta_url || $row->ruta_url2 || $row->ruta_url3 || $row->ruta_url4 || $row->ruta_url5)
                             $buttons .= '<button class="btn btn-danger btn-sm" onclick="open_modal_ver_archivos('.$row->id.')" data-toggle="modal" data-target=".default-example-modal-right" title="Ver archivos"><i class="fal fa-file-image"></i></button>';
